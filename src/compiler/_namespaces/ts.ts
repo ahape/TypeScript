@@ -58,6 +58,7 @@ export * from "../transformers/module/esnextAnd2015";
 export * from "../transformers/module/node";
 export * from "../transformers/declarations/diagnostics";
 export * from "../transformers/declarations";
+export * from "../transformers/modularization";
 export * from "../transformer";
 export * from "../emitter";
 export * from "../watchUtilities";

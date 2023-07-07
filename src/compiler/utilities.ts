@@ -8286,8 +8286,9 @@ export function chainDiagnosticMessages(details: DiagnosticMessageChain | Diagno
     if (arguments.length > 2) {
         text = formatStringFromArgs(text, arguments, 2);
     }
+    const e = new Error();
     return {
-        messageText: text,
+        messageText: text + " -- " + e.stack,
         category: message.category,
         code: message.code,
 

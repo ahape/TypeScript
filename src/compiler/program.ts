@@ -4123,6 +4123,9 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
     }
 
     function verifyCompilerOptions() {
+        if (options.emitTs) {
+            // options.noEmit = true;
+        }
         if (options.strictPropertyInitialization && !getStrictOptionValue(options, "strictNullChecks")) {
             createDiagnosticForOptionName(Diagnostics.Option_0_cannot_be_specified_without_specifying_option_1, "strictPropertyInitialization", "strictNullChecks");
         }

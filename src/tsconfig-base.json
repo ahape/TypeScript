@@ -15,6 +15,7 @@
         "composite": true,
         "noEmitOnError": true,
         "emitDeclarationOnly": true,
+        "stripInternal": false,
 
         "strict": true,
         "strictBindCallApply": false,
@@ -28,7 +29,7 @@
         "skipLibCheck": true,
 
         "alwaysStrict": true,
-        "preserveConstEnums": true,
+        "preserveConstEnums": false,
         "newLine": "lf",
 
         "types": []

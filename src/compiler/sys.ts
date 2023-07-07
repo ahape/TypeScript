@@ -1572,7 +1572,8 @@ export let sys: System = (() => {
                 return 0;
             },
             exit(exitCode?: number): void {
-                disableCPUProfiler(() => process.exit(exitCode));
+                // disableCPUProfiler(() => process.exit(exitCode));
+                console.log(`disableCPUProfiler(() => process.exit(${exitCode}));`);
             },
             enableCPUProfiler,
             disableCPUProfiler,

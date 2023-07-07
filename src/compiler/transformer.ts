@@ -72,6 +72,7 @@ import {
     transformNodeModule,
     transformSystemModule,
     transformTypeScript,
+    transformModularization,
     VariableDeclaration
 } from "./_namespaces/ts";
 import * as performance from "./_namespaces/ts.performance";
@@ -126,61 +127,65 @@ function getScriptTransformers(compilerOptions: CompilerOptions, customTransform
 
     addRange(transformers, customTransformers && map(customTransformers.before, wrapScriptTransformerFactory));
 
-    transformers.push(transformTypeScript);
+    if (compilerOptions.emitTs) {
+        transformers.push(transformModularization);
+    } else {
+        transformers.push(transformTypeScript);
 
-    if (compilerOptions.experimentalDecorators) {
-        transformers.push(transformLegacyDecorators);
-    }
+        if (compilerOptions.experimentalDecorators) {
+            transformers.push(transformLegacyDecorators);
+        }
 
-    if (getJSXTransformEnabled(compilerOptions)) {
-        transformers.push(transformJsx);
-    }
+        if (getJSXTransformEnabled(compilerOptions)) {
+            transformers.push(transformJsx);
+        }
 
-    if (languageVersion < ScriptTarget.ESNext) {
-        transformers.push(transformESNext);
-    }
+        if (languageVersion < ScriptTarget.ESNext) {
+            transformers.push(transformESNext);
+        }
 
-    if (!compilerOptions.experimentalDecorators && (languageVersion < ScriptTarget.ESNext || !useDefineForClassFields)) {
-        transformers.push(transformESDecorators);
-    }
+        if (!compilerOptions.experimentalDecorators && (languageVersion < ScriptTarget.ESNext || !useDefineForClassFields)) {
+            transformers.push(transformESDecorators);
+        }
 
-    transformers.push(transformClassFields);
+        transformers.push(transformClassFields);
 
-    if (languageVersion < ScriptTarget.ES2021) {
-        transformers.push(transformES2021);
-    }
+        if (languageVersion < ScriptTarget.ES2021) {
+            transformers.push(transformES2021);
+        }
 
-    if (languageVersion < ScriptTarget.ES2020) {
-        transformers.push(transformES2020);
-    }
+        if (languageVersion < ScriptTarget.ES2020) {
+            transformers.push(transformES2020);
+        }
 
-    if (languageVersion < ScriptTarget.ES2019) {
-        transformers.push(transformES2019);
-    }
+        if (languageVersion < ScriptTarget.ES2019) {
+            transformers.push(transformES2019);
+        }
 
-    if (languageVersion < ScriptTarget.ES2018) {
-        transformers.push(transformES2018);
-    }
+        if (languageVersion < ScriptTarget.ES2018) {
+            transformers.push(transformES2018);
+        }
 
-    if (languageVersion < ScriptTarget.ES2017) {
-        transformers.push(transformES2017);
-    }
+        if (languageVersion < ScriptTarget.ES2017) {
+            transformers.push(transformES2017);
+        }
 
-    if (languageVersion < ScriptTarget.ES2016) {
-        transformers.push(transformES2016);
-    }
+        if (languageVersion < ScriptTarget.ES2016) {
+            transformers.push(transformES2016);
+        }
 
-    if (languageVersion < ScriptTarget.ES2015) {
-        transformers.push(transformES2015);
-        transformers.push(transformGenerators);
-    }
+        if (languageVersion < ScriptTarget.ES2015) {
+            transformers.push(transformES2015);
+            transformers.push(transformGenerators);
+        }
 
-    transformers.push(getModuleTransformer(moduleKind));
+        transformers.push(getModuleTransformer(moduleKind));
 
-    // The ES5 transformer is last so that it can substitute expressions like `exports.default`
-    // for ES3.
-    if (languageVersion < ScriptTarget.ES5) {
-        transformers.push(transformES5);
+        // The ES5 transformer is last so that it can substitute expressions like `exports.default`
+        // for ES3.
+        if (languageVersion < ScriptTarget.ES5) {
+            transformers.push(transformES5);
+        }
     }
 
     addRange(transformers, customTransformers && map(customTransformers.after, wrapScriptTransformerFactory));

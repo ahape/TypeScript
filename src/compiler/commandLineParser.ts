@@ -1545,6 +1545,13 @@ const commandOptionsWithoutBuild: CommandLineOption[] = [
         type: "string",
         defaultValueDescription: undefined,
     },
+    {
+        name: "emitTs",
+        type: "boolean",
+        affectsEmit: true,
+        category: Diagnostics.Language_and_Environment,
+        defaultValueDescription: undefined,
+    },
 ];
 
 /** @internal */
