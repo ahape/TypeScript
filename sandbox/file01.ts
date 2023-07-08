@@ -1,3 +1,3 @@
 namespace Foo.Bar.Baz {
-  export const xfooBar = () => "hello world";
+  export const fooBar = () => "hello world";
 }

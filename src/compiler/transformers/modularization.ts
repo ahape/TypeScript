@@ -39,7 +39,7 @@ import {
     //EmitFlags,
     //EmitHint,
     //emptyArray,
-    //Expression,
+    Expression,
     //ExpressionStatement,
     //ExpressionWithTypeArguments,
     //filter,
@@ -130,6 +130,7 @@ import {
     //isVariableDeclarationList,
     //isVariableStatement,
     //isWithStatement,
+    Identifier,
     //IterationStatement,
     //LabeledStatement,
     //last,
@@ -156,9 +157,12 @@ import {
     //ParameterDeclaration,
     //ParenthesizedExpression,
     //PrimaryExpression,
+    PrivateIdentifier,
     //ProcessLevel,
     //processTaggedTemplateExpression,
+    PropertyAccessExpression,
     //PropertyAssignment,
+    QualifiedName,
     //rangeEndIsOnSameLineAsRangeStart,
     //ReturnStatement,
     //SemicolonClassElement,
@@ -246,15 +250,28 @@ export function transformModularization(context: TransformationContext): (x: Sou
     function visitorWorker(node: Node): VisitResult<Node | undefined> {
         switch (node.kind) {
             case SyntaxKind.PropertyAccessExpression:
-                return visitPropertyAccessExpression(node);
+                return visitPropertyAccessExpression(node as PropertyAccessExpression);
             default:
                 return visitEachChild(node, visitor, context);
         }
     }
 
-    function visitPropertyAccessExpression(node: Node): ReturnType<typeof visitorWorker> {
-        logVerbose(node);
+    function visitPropertyAccessExpression(node: PropertyAccessExpression): ReturnType<typeof visitorWorker> {
+        handlePropertyAccessExpression(node, node.expression, node.name);
         return node;
+    }
+
+    function handlePropertyAccessExpression(
+        node: PropertyAccessExpression | QualifiedName,
+        left: Expression | QualifiedName,
+        right: Identifier | PrivateIdentifier)
+        : void
+    {
+        // console.log(node.links);
+        return;
+        logVerbose(node);
+        logVerbose(left);
+        logVerbose(right);
     }
 
     function visitSourceFile(node: SourceFile): SourceFile {

@@ -1816,7 +1816,12 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         runWithCancellationToken: (token, callback) => {
             try {
                 cancellationToken = token;
-                return callback(checker);
+                const ret = callback(checker);
+
+                // @ts-ignore
+                host.writeFile("/var/tmp/checker-dump.json", JSON.stringify(nodeLinks, null, 2), false, () => {});
+
+                return ret;
             }
             finally {
                 cancellationToken = undefined;
