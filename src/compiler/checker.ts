@@ -154,7 +154,6 @@ import {
     EmitTextWriter,
     emptyArray,
     endsWith,
-    EnumKind,
     EntityName,
     EntityNameExpression,
     EntityNameOrEntityNameExpression,
@@ -821,7 +820,6 @@ import {
     MethodSignature,
     minAndMax,
     MinusToken,
-    ModeAwareCacheKey,
     Modifier,
     ModifierFlags,
     modifiersToFlags,
@@ -848,7 +846,7 @@ import {
     nodeCanBeDecorated,
     NodeCheckFlags,
     NodeFlags,
-    NodeId,
+    NodeLinksImpl,
     nodeHasName,
     nodeIsDecorated,
     nodeIsMissing,
@@ -934,7 +932,6 @@ import {
     ScriptKind,
     ScriptTarget,
     SetAccessorDeclaration,
-    SerializedTypeEntry,
     setCommentRange,
     setEmitFlags,
     setIdentifierTypeArguments,
@@ -981,6 +978,7 @@ import {
     SymbolFormatFlags,
     SymbolId,
     SymbolLinks,
+    SymbolLinksImpl,
     symbolName,
     SymbolTable,
     SymbolTracker,
@@ -1356,113 +1354,6 @@ const intrinsicTypeKinds: ReadonlyMap<string, IntrinsicTypeKind> = new Map(Objec
     Uncapitalize: IntrinsicTypeKind.Uncapitalize
 }));
 
-function observable<T extends { new(...args: any[]): any }>(constructor: T, _: unknown) {
-    return class Observable extends constructor {
-        constructor(...args: any[]) {
-            super(...args);
-
-            const id = <string>args[0];
-
-            Object.keys(this).forEach(key => {
-                let capture: any;
-                Object.defineProperty(this, key, {
-                    get() { return capture; },
-                    set(update) {
-                            console.log(id, "updated ->", key);
-                        capture = update;
-                    },
-                });
-            });
-        }
-    };
-}
-
-@observable
-class _SymbolLinks implements SymbolLinks {
-    public _symbolLinksBrand: any = undefined;
-    public immediateTarget?: Symbol = undefined;
-    public aliasTarget?: Symbol = undefined;
-    public target?: Symbol = undefined;
-    public type?: Type = undefined;
-    public writeType?: Type = undefined;
-    public nameType?: Type = undefined;
-    public uniqueESSymbolType?: Type = undefined;
-    public declaredType?: Type = undefined;
-    public typeParameters?: TypeParameter[] = undefined;
-    public outerTypeParameters?: TypeParameter[] = undefined;
-    public instantiations?: Map<string, Type> = undefined;
-    public aliasSymbol?: Symbol = undefined;
-    public aliasTypeArguments?: readonly Type[] = undefined;
-    public inferredClassSymbol?: Map<SymbolId, TransientSymbol> = undefined;
-    public mapper?: TypeMapper = undefined;
-    public referenced?: boolean = undefined;
-    public constEnumReferenced?: boolean = undefined;
-    public containingType?: UnionOrIntersectionType = undefined;
-    public leftSpread?: Symbol = undefined;
-    public rightSpread?: Symbol = undefined;
-    public syntheticOrigin?: Symbol = undefined;
-    public isDiscriminantProperty?: boolean = undefined;
-    public resolvedExports?: SymbolTable = undefined;
-    public resolvedMembers?: SymbolTable = undefined;
-    public exportsChecked?: boolean = undefined;
-    public typeParametersChecked?: boolean = undefined;
-    public isDeclarationWithCollidingName?: boolean = undefined;
-    public bindingElement?: BindingElement = undefined;
-    public exportsSomeValue?: boolean = undefined;
-    public enumKind?: EnumKind = undefined;
-    public originatingImport?: ImportDeclaration | ImportCall = undefined;
-    public lateSymbol?: Symbol = undefined;
-    public specifierCache?: Map<ModeAwareCacheKey, string> = undefined;
-    public extendedContainers?: Symbol[] = undefined;
-    public extendedContainersByFile?: Map<NodeId, Symbol[]> = undefined;
-    public variances?: VarianceFlags[] = undefined;
-    public deferralConstituents?: Type[] = undefined;
-    public deferralWriteConstituents?: Type[] = undefined;
-    public deferralParent?: Type = undefined;
-    public cjsExportMerged?: Symbol = undefined;
-    public typeOnlyDeclaration?: TypeOnlyAliasDeclaration | false = undefined;
-    public typeOnlyExportStarMap?: Map<__String, ExportDeclaration & { readonly isTypeOnly: true }> = undefined;
-    public typeOnlyExportStarName?: __String = undefined;
-    public isConstructorDeclaredProperty?: boolean = undefined;
-    public tupleLabelDeclaration?: NamedTupleMember | ParameterDeclaration = undefined;
-    public accessibleChainCache?: Map<string, Symbol[] | undefined> = undefined;
-    public filteredIndexSymbolCache?: Map<string, Symbol> = undefined;
-    constructor(_: string) { }
-}
-
-class _NodeLinks implements NodeLinks {
-    public flags: NodeCheckFlags = NodeCheckFlags.None;
-    public jsxFlags: JsxFlags = JsxFlags.None;
-    public resolvedType?: Type;
-    public resolvedEnumType?: Type;
-    public resolvedSignature?: Signature;
-    public resolvedSymbol?: Symbol;
-    public resolvedIndexInfo?: IndexInfo;
-    public effectsSignature?: Signature;
-    public enumMemberValue?: string | number;
-    public isVisible?: boolean;
-    public containsArgumentsReference?: boolean;
-    public hasReportedStatementInAmbientContext?: boolean;
-    public resolvedJsxElementAttributesType?: Type;
-    public resolvedJsxElementAllAttributesType?: Type;
-    public resolvedJSDocType?: Type;
-    public switchTypes?: Type[];
-    public jsxNamespace?: Symbol | false;
-    public jsxImplicitImportContainer?: Symbol | false;
-    public contextFreeType?: Type;
-    public deferredNodes?: Set<Node>;
-    public capturedBlockScopeBindings?: Symbol[];
-    public outerTypeParameters?: TypeParameter[];
-    public isExhaustive?: boolean | 0;
-    public skipDirectInference?: true;
-    public declarationRequiresScopeChange?: boolean;
-    public serializedTypes?: Map<string, SerializedTypeEntry>;
-    public decoratorSignature?: Signature;
-    public spreadIndices?: { first: number | undefined, last: number | undefined };
-    public parameterInitializerContainsUndefined?: boolean;
-    public fakeScopeForSignatureDeclaration?: boolean;
-    public assertionExpressionType?: Type;
-}
 
 /** @internal */
 export function getNodeId(node: Node): number {
@@ -2535,7 +2426,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     function createSymbol(flags: SymbolFlags, name: __String, checkFlags?: CheckFlags) {
         symbolCount++;
         const symbol = new Symbol(flags | SymbolFlags.Transient, name) as TransientSymbol;
-        symbol.links = new _SymbolLinks(symbolLabel(symbol)) as TransientSymbolLinks;
+        symbol.links = new SymbolLinksImpl(symbolLabel(symbol)) as TransientSymbolLinks;
         symbol.links.checkFlags = checkFlags || CheckFlags.None;
         return symbol;
     }
@@ -2800,12 +2691,12 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     function getSymbolLinks(symbol: Symbol): SymbolLinks {
         if (symbol.flags & SymbolFlags.Transient) return (symbol as TransientSymbol).links;
         const id = getSymbolId(symbol);
-        return symbolLinks[id] ??= new _SymbolLinks(symbolLabel(symbol));
+        return symbolLinks[id] ??= new SymbolLinksImpl(symbolLabel(symbol));
     }
 
     function getNodeLinks(node: Node): NodeLinks {
         const nodeId = getNodeId(node);
-        return nodeLinks[nodeId] || (nodeLinks[nodeId] = new _NodeLinks());
+        return nodeLinks[nodeId] || (nodeLinks[nodeId] = new NodeLinksImpl(nodeId));
     }
 
     function isGlobalSourceFile(node: Node) {

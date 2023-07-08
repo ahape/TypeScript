@@ -117,6 +117,7 @@ import {
     EntityNameExpression,
     EntityNameOrEntityNameExpression,
     EnumDeclaration,
+    EnumKind,
     EqualityComparer,
     equalOwnProperties,
     EqualsToken,
@@ -390,6 +391,7 @@ import {
     MethodDeclaration,
     MethodSignature,
     ModeAwareCache,
+    ModeAwareCacheKey,
     ModifierFlags,
     ModifierLike,
     ModuleBlock,
@@ -408,6 +410,7 @@ import {
     NewExpression,
     NewLineKind,
     Node,
+    NodeId,
     NodeArray,
     NodeFlags,
     nodeModulesPathPart,
@@ -470,6 +473,7 @@ import {
     ScriptTarget,
     semanticDiagnosticsOptionDeclarations,
     SetAccessorDeclaration,
+    SerializedTypeEntry,
     ShorthandPropertyAssignment,
     shouldAllowImportingTsExtension,
     Signature,
@@ -557,6 +561,16 @@ import {
     WriteFileCallback,
     WriteFileCallbackData,
     YieldExpression,
+    NodeCheckFlags,
+    JsxFlags,
+    NamedTupleMember,
+    NodeLinks,
+    SymbolId,
+    SymbolLinks,
+    TypeMapper,
+    TypeOnlyAliasDeclaration,
+    UnionOrIntersectionType,
+    VarianceFlags,
 } from "./_namespaces/ts";
 
 /** @internal */
@@ -8002,21 +8016,23 @@ export interface ObjectAllocator {
     getSourceMapSourceConstructor(): new (fileName: string, text: string, skipTrivia?: (pos: number) => number) => SourceMapSource;
 }
 
-function Symbol(this: Symbol, flags: SymbolFlags, name: __String) {
-    this.flags = flags;
-    this.escapedName = name;
-    this.declarations = undefined;
-    this.valueDeclaration = undefined;
-    this.id = 0;
-    this.mergeId = 0;
-    this.parent = undefined;
-    this.members = undefined;
-    this.exports = undefined;
-    this.exportSymbol = undefined;
-    this.constEnumOnlyModule = undefined;
-    this.isReferenced = undefined;
-    this.isAssigned = undefined;
-    (this as any).links = undefined; // used by TransientSymbol
+@observable("Symbol")
+class SymbolImpl implements Symbol {
+    public declarations: Symbol["declarations"] = undefined;
+    public valueDeclaration: Symbol["valueDeclaration"] = undefined;
+    public id: Symbol["id"] = 0;
+    public mergeId: Symbol["mergeId"] = 0;
+    public parent: Symbol["parent"] = undefined;
+    public members: Symbol["members"] = undefined;
+    public exports: Symbol["exports"] = undefined;
+    public exportSymbol: Symbol["exportSymbol"] = undefined;
+    public constEnumOnlyModule: Symbol["constEnumOnlyModule"] = undefined;
+    public isReferenced: Symbol["isReferenced"] = undefined;
+    public isAssigned: Symbol["isAssigned"] = undefined;
+    public links: any = undefined; // used by TransientSymbol
+
+    constructor(public flags: SymbolFlags,
+                public escapedName: __String) { }
 }
 
 function Type(this: Type, checker: TypeChecker, flags: TypeFlags) {
@@ -8082,7 +8098,7 @@ export const objectAllocator: ObjectAllocator = {
     getIdentifierConstructor: () => Identifier as any,
     getPrivateIdentifierConstructor: () => Node as any,
     getSourceFileConstructor: () => Node as any,
-    getSymbolConstructor: () => Symbol as any,
+    getSymbolConstructor: () => SymbolImpl as any,
     getTypeConstructor: () => Type as any,
     getSignatureConstructor: () => Signature as any,
     getSourceMapSourceConstructor: () => SourceMapSource as any,
@@ -10310,4 +10326,144 @@ export function getTextOfJsxNamespacedName(node: JsxNamespacedName) {
 /** @internal */
 export function intrinsicTagNameToString(node: Identifier | JsxNamespacedName) {
     return isIdentifier(node) ? idText(node) : getTextOfJsxNamespacedName(node);
+}
+
+interface ObservableCtor {
+    new(...args: any[]): any;
+    name?: string;
+}
+
+export function observable(className: string) {
+    const flagged = ["Foo", "Bar", "Baz", "quux", "heyo"];
+    return function<T extends ObservableCtor>(constructor: T, _: unknown) {
+        return class Observable extends constructor {
+            constructor(...args: any[]) {
+                let name = className;
+                const suffix = args.find(a => typeof a === "string");
+                if (suffix) {
+                    name += ":" + suffix;
+                }
+
+                super(...args);
+
+                Object.keys(this).forEach(key => {
+                    let backingField: any = this[key];
+                    Object.defineProperty(this, key, {
+                        get() { return backingField; },
+                        set(value) {
+                            backingField = value;
+                            if (key === "resolvedExports" &&
+                                flagged.some(f => name.includes(f)))
+                            {
+                                // To show getter values
+                                const repr = this.repr(0);
+                                console.log(name, key, repr);
+                            }
+                        },
+                    });
+                });
+            }
+
+            repr(depth: number): Record<string, any> {
+                const proxy: Record<string, any> = {};
+                Object.keys(this).forEach(k => {
+                    if (depth < 3 && typeof this[k] === "object" && this[k] != null) {
+                        proxy[k] = Observable.prototype.repr.call(this[k] as any, depth + 1);
+                    } else {
+                        proxy[k] = this[k];
+                    }
+                });
+                return proxy;
+            }
+        };
+    };
+}
+
+@observable("SymbolLinks")
+export class SymbolLinksImpl implements SymbolLinks {
+    public _symbolLinksBrand: any = undefined;
+    public immediateTarget?: Symbol = undefined;
+    public aliasTarget?: Symbol = undefined;
+    public target?: Symbol = undefined;
+    public type?: Type = undefined;
+    public writeType?: Type = undefined;
+    public nameType?: Type = undefined;
+    public uniqueESSymbolType?: Type = undefined;
+    public declaredType?: Type = undefined;
+    public typeParameters?: TypeParameter[] = undefined;
+    public outerTypeParameters?: TypeParameter[] = undefined;
+    public instantiations?: Map<string, Type> = undefined;
+    public aliasSymbol?: Symbol = undefined;
+    public aliasTypeArguments?: readonly Type[] = undefined;
+    public inferredClassSymbol?: Map<SymbolId, TransientSymbol> = undefined;
+    public mapper?: TypeMapper = undefined;
+    public referenced?: boolean = undefined;
+    public constEnumReferenced?: boolean = undefined;
+    public containingType?: UnionOrIntersectionType = undefined;
+    public leftSpread?: Symbol = undefined;
+    public rightSpread?: Symbol = undefined;
+    public syntheticOrigin?: Symbol = undefined;
+    public isDiscriminantProperty?: boolean = undefined;
+    public resolvedExports?: SymbolTable = undefined;
+    public resolvedMembers?: SymbolTable = undefined;
+    public exportsChecked?: boolean = undefined;
+    public typeParametersChecked?: boolean = undefined;
+    public isDeclarationWithCollidingName?: boolean = undefined;
+    public bindingElement?: BindingElement = undefined;
+    public exportsSomeValue?: boolean = undefined;
+    public enumKind?: EnumKind = undefined;
+    public originatingImport?: ImportDeclaration | ImportCall = undefined;
+    public lateSymbol?: Symbol = undefined;
+    public specifierCache?: Map<ModeAwareCacheKey, string> = undefined;
+    public extendedContainers?: Symbol[] = undefined;
+    public extendedContainersByFile?: Map<NodeId, Symbol[]> = undefined;
+    public variances?: VarianceFlags[] = undefined;
+    public deferralConstituents?: Type[] = undefined;
+    public deferralWriteConstituents?: Type[] = undefined;
+    public deferralParent?: Type = undefined;
+    public cjsExportMerged?: Symbol = undefined;
+    public typeOnlyDeclaration?: TypeOnlyAliasDeclaration | false = undefined;
+    public typeOnlyExportStarMap?: Map<__String, ExportDeclaration & { readonly isTypeOnly: true }> = undefined;
+    public typeOnlyExportStarName?: __String = undefined;
+    public isConstructorDeclaredProperty?: boolean = undefined;
+    public tupleLabelDeclaration?: NamedTupleMember | ParameterDeclaration = undefined;
+    public accessibleChainCache?: Map<string, Symbol[] | undefined> = undefined;
+    public filteredIndexSymbolCache?: Map<string, Symbol> = undefined;
+    constructor(_: string) { }
+}
+
+@observable("NodeLinks")
+export class NodeLinksImpl implements NodeLinks {
+    public flags: NodeCheckFlags = NodeCheckFlags.None;
+    public jsxFlags: JsxFlags = JsxFlags.None;
+    public resolvedType?: Type = undefined;
+    public resolvedEnumType?: Type = undefined;
+    public resolvedSignature?: Signature = undefined;
+    public resolvedSymbol?: Symbol = undefined;
+    public resolvedIndexInfo?: IndexInfo = undefined;
+    public effectsSignature?: Signature = undefined;
+    public enumMemberValue?: string | number = undefined;
+    public isVisible?: boolean = undefined;
+    public containsArgumentsReference?: boolean = undefined;
+    public hasReportedStatementInAmbientContext?: boolean = undefined;
+    public resolvedJsxElementAttributesType?: Type = undefined;
+    public resolvedJsxElementAllAttributesType?: Type = undefined;
+    public resolvedJSDocType?: Type = undefined;
+    public switchTypes?: Type[] = undefined;
+    public jsxNamespace?: Symbol | false = undefined;
+    public jsxImplicitImportContainer?: Symbol | false = undefined;
+    public contextFreeType?: Type = undefined;
+    public deferredNodes?: Set<Node> = undefined;
+    public capturedBlockScopeBindings?: Symbol[] = undefined;
+    public outerTypeParameters?: TypeParameter[] = undefined;
+    public isExhaustive?: boolean | 0 = undefined;
+    public skipDirectInference?: true = undefined;
+    public declarationRequiresScopeChange?: boolean = undefined;
+    public serializedTypes?: Map<string, SerializedTypeEntry> = undefined;
+    public decoratorSignature?: Signature = undefined;
+    public spreadIndices?: { first: number | undefined, last: number | undefined } = undefined;
+    public parameterInitializerContainsUndefined?: boolean = undefined;
+    public fakeScopeForSignatureDeclaration?: boolean = undefined;
+    public assertionExpressionType?: Type = undefined;
+    constructor(_: number) { }
 }
