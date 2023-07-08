@@ -1,1 +1,2 @@
-/opt/homebrew/bin/node ./built/local/tsc.js --noEmit ./sandbox/index.ts
+#!/bin/zsh
+/opt/homebrew/bin/node ./built/local/tsc.js -p ./sandbox/

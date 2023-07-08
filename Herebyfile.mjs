@@ -171,13 +171,19 @@ function createBundler(entrypoint, outfile, taskOptions = {}) {
             bundle: true,
             outfile,
             platform: "node",
-            target: ["es2020", "node14.17"],
+            target: ["esnext", "node14.17"],
             format: "cjs",
             sourcemap: "linked",
             sourcesContent: false,
             treeShaking: taskOptions.treeShaking,
             packages: "external",
             logLevel: "warning",
+            tsconfigRaw: {
+              compilerOptions: {
+                experimentalDecorators: true,
+                emitDecoratorMetadata: true,
+              },
+            },
             // legalComments: "none", // If we add copyright headers to the source files, uncomment.
         };
 
