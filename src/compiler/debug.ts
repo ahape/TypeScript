@@ -115,6 +115,7 @@ export namespace Debug {
     export let currentLogLevel = LogLevel.Warning;
     export let isDebugging = false;
     export let loggingHost: LoggingHost | undefined;
+    export let logObservables = false;
     /* eslint-enable prefer-const */
 
     type AssertionKeys = MatchingKeys<typeof Debug, AnyFunction>;

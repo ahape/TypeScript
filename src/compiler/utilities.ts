@@ -519,7 +519,6 @@ import {
     TokenFlags,
     tokenToString,
     toPath,
-    tracing,
     TransformFlags,
     TransientSymbol,
     trimString,
@@ -8035,31 +8034,30 @@ class SymbolImpl implements Symbol {
                 public escapedName: __String) { }
 }
 
-function Type(this: Type, checker: TypeChecker, flags: TypeFlags) {
-    this.flags = flags;
-    if (Debug.isDebugging || tracing) {
-        this.checker = checker;
-    }
+@observable("Type")
+class TypeImpl implements Type {
+    public id: Type["id"] = undefined!;
+    public symbol: Type["symbol"] = undefined!;
+    constructor(public checker: TypeChecker, public flags: TypeFlags) { }
 }
 
-function Signature(this: Signature, checker: TypeChecker, flags: SignatureFlags) {
-    this.flags = flags;
-    if (Debug.isDebugging) {
-        this.checker = checker;
-    }
+@observable("Signature")
+class SignatureImpl implements Signature {
+    public parameters: Signature["parameters"] = undefined!;
+    public minArgumentCount: Signature["minArgumentCount"] = undefined!;
+    constructor(public checker: TypeChecker, public flags: SignatureFlags) { }
 }
 
-function Node(this: Mutable<Node>, kind: SyntaxKind, pos: number, end: number) {
-    this.pos = pos;
-    this.end = end;
-    this.kind = kind;
-    this.id = 0;
-    this.flags = NodeFlags.None;
-    this.modifierFlagsCache = ModifierFlags.None;
-    this.transformFlags = TransformFlags.None;
-    this.parent = undefined!;
-    this.original = undefined;
-    this.emitNode = undefined;
+@observable("Node")
+class NodeImpl implements Node {
+    public id: Node["id"] = 0;
+    public flags: Node["flags"] = NodeFlags.None;
+    public modifierFlagsCache: Node["modifierFlagsCache"] = ModifierFlags.None;
+    public transformFlags: Node["transformFlags"] = TransformFlags.None;
+    public parent: Node["parent"] = undefined!;
+    public original: Node["original"] = undefined;
+    public emitNode: Node["emitNode"] = undefined;
+    constructor(public kind: SyntaxKind, public pos: number, public end: number) { }
 }
 
 function Token(this: Mutable<Node>, kind: SyntaxKind, pos: number, end: number) {
@@ -8093,14 +8091,14 @@ function SourceMapSource(this: SourceMapSource, fileName: string, text: string, 
 
 /** @internal */
 export const objectAllocator: ObjectAllocator = {
-    getNodeConstructor: () => Node as any,
+    getNodeConstructor: () => NodeImpl as any,
     getTokenConstructor: () => Token as any,
     getIdentifierConstructor: () => Identifier as any,
-    getPrivateIdentifierConstructor: () => Node as any,
-    getSourceFileConstructor: () => Node as any,
+    getPrivateIdentifierConstructor: () => NodeImpl as any,
+    getSourceFileConstructor: () => NodeImpl as any,
     getSymbolConstructor: () => SymbolImpl as any,
-    getTypeConstructor: () => Type as any,
-    getSignatureConstructor: () => Signature as any,
+    getTypeConstructor: () => TypeImpl as any,
+    getSignatureConstructor: () => SignatureImpl as any,
     getSourceMapSourceConstructor: () => SourceMapSource as any,
 };
 
@@ -10334,17 +10332,25 @@ interface ObservableCtor {
 }
 
 export function observable(className: string) {
-    const flagged = ["Foo", "Bar", "Baz", "quux", "heyo"];
+    // const flagged = ["Foo", "Bar", "Baz", "quux", "heyo"];
     return function<T extends ObservableCtor>(constructor: T, _: unknown) {
         return class Observable extends constructor {
             constructor(...args: any[]) {
-                let name = className;
-                const suffix = args.find(a => typeof a === "string");
+                super(...args);
+                this.hookIntoPropertySetters(args);
+            }
+
+            public tryCreateName(ctorArgs: any[]): string {
+                let name = className
+                const suffix = ctorArgs.find(a => typeof a === "string");
                 if (suffix) {
                     name += ":" + suffix;
                 }
+                return name;
+            }
 
-                super(...args);
+            public hookIntoPropertySetters(ctorArgs: any[]): void {
+                const name = this.tryCreateName(ctorArgs);
 
                 Object.keys(this).forEach(key => {
                     let backingField: any = this[key];
@@ -10352,28 +10358,16 @@ export function observable(className: string) {
                         get() { return backingField; },
                         set(value) {
                             backingField = value;
-                            if (key === "resolvedExports" &&
-                                flagged.some(f => name.includes(f)))
-                            {
-                                // To show getter values
-                                const repr = this.repr(0);
-                                console.log(name, key, repr);
+                            if (Debug.logObservables) {
+                                // @ts-ignore
+                                console.dir([
+                                    name,
+                                    key,
+                                ], { getters: true });
                             }
                         },
                     });
                 });
-            }
-
-            repr(depth: number): Record<string, any> {
-                const proxy: Record<string, any> = {};
-                Object.keys(this).forEach(k => {
-                    if (depth < 3 && typeof this[k] === "object" && this[k] != null) {
-                        proxy[k] = Observable.prototype.repr.call(this[k] as any, depth + 1);
-                    } else {
-                        proxy[k] = this[k];
-                    }
-                });
-                return proxy;
             }
         };
     };
