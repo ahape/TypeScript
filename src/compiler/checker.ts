@@ -153,6 +153,7 @@ import {
     EmitResolver,
     EmitTextWriter,
     emptyArray,
+    enableObservableLogging,
     endsWith,
     EntityName,
     EntityNameExpression,
@@ -807,6 +808,7 @@ import {
     LiteralExpression,
     LiteralType,
     LiteralTypeNode,
+    logObservables,
     map,
     mapDefined,
     MappedSymbol,
@@ -45154,8 +45156,10 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     function checkSourceFile(node: SourceFile) {
         tracing?.push(tracing.Phase.Check, "checkSourceFile", { path: node.path }, /*separateBeginAndEnd*/ true);
         performance.mark("beforeCheck");
-        Debug.logObservables = !node.fileName.endsWith(".d.ts");
+        enableObservableLogging(!node.fileName.endsWith(".d.ts"));
+        console.log(node.fileName);
         checkSourceFileWorker(node);
+        logObservables();
         performance.mark("afterCheck");
         performance.measure("Check", "beforeCheck", "afterCheck");
         tracing?.pop();

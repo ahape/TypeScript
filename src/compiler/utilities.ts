@@ -8060,27 +8060,38 @@ class NodeImpl implements Node {
     constructor(public kind: SyntaxKind, public pos: number, public end: number) { }
 }
 
-function Token(this: Mutable<Node>, kind: SyntaxKind, pos: number, end: number) {
-    this.pos = pos;
-    this.end = end;
-    this.kind = kind;
-    this.id = 0;
-    this.flags = NodeFlags.None;
-    this.transformFlags = TransformFlags.None;
-    this.parent = undefined!;
-    this.emitNode = undefined;
+@observable("Token")
+class TokenImpl<TKind extends SyntaxKind> implements Token<TKind> {
+    public id: Token<TKind>["id"] = 0;
+    public flags: Token<TKind>["flags"] = NodeFlags.None;
+    public transformFlags: Token<TKind>["transformFlags"] = TransformFlags.None;
+    public parent: Token<TKind>["parent"] = undefined!;
+    public emitNode: Token<TKind>["emitNode"] = undefined;
+    public modifierFlagsCache: ModifierFlags = undefined!;
+    constructor(public kind: TKind, public pos: number, public end: number) { }
 }
 
-function Identifier(this: Mutable<Node>, kind: SyntaxKind, pos: number, end: number) {
-    this.pos = pos;
-    this.end = end;
-    this.kind = kind;
-    this.id = 0;
-    this.flags = NodeFlags.None;
-    this.transformFlags = TransformFlags.None;
-    this.parent = undefined!;
-    this.original = undefined;
-    this.emitNode = undefined;
+
+@observable("Identifier")
+class IdentifierImpl implements Identifier {
+    public id: Identifier["id"] = 0;
+    public flags: Identifier["flags"] = NodeFlags.None;
+    public transformFlags: Identifier["transformFlags"] = TransformFlags.None;
+    public parent: Identifier["parent"] = undefined!;
+    public emitNode: Identifier["emitNode"] = undefined;
+    public modifierFlagsCache: ModifierFlags = undefined!;
+    public escapedText: Identifier["escapedText"] = undefined!;
+    public symbol: Identifier["symbol"] = undefined!;
+    public _primaryExpressionBrand: Identifier["_primaryExpressionBrand"] = undefined!;
+    public _memberExpressionBrand: Identifier["_memberExpressionBrand"] = undefined!;
+    public _leftHandSideExpressionBrand: Identifier["_leftHandSideExpressionBrand"] = undefined!;
+    public _updateExpressionBrand: Identifier["_updateExpressionBrand"] = undefined!;
+    public _unaryExpressionBrand: Identifier["_unaryExpressionBrand"] = undefined!;
+    public _expressionBrand: Identifier["_expressionBrand"] = undefined!;
+    public _declarationBrand: Identifier["_declarationBrand"] = undefined!;
+    public _jsdocContainerBrand: Identifier["_jsdocContainerBrand"] = undefined!;
+    public _flowContainerBrand: Identifier["_flowContainerBrand"] = undefined!;
+    constructor(public kind: Identifier["kind"], public pos: number, public end: number) { }
 }
 
 function SourceMapSource(this: SourceMapSource, fileName: string, text: string, skipTrivia?: (pos: number) => number) {
@@ -8092,8 +8103,8 @@ function SourceMapSource(this: SourceMapSource, fileName: string, text: string, 
 /** @internal */
 export const objectAllocator: ObjectAllocator = {
     getNodeConstructor: () => NodeImpl as any,
-    getTokenConstructor: () => Token as any,
-    getIdentifierConstructor: () => Identifier as any,
+    getTokenConstructor: () => TokenImpl as any,
+    getIdentifierConstructor: () => IdentifierImpl as any,
     getPrivateIdentifierConstructor: () => NodeImpl as any,
     getSourceFileConstructor: () => NodeImpl as any,
     getSymbolConstructor: () => SymbolImpl as any,
@@ -10331,17 +10342,43 @@ interface ObservableCtor {
     name?: string;
 }
 
-export function observable(className: string) {
+let loggingEnabled = false;
+const log = new Set<any>();
+
+export function enableObservableLogging(enable: boolean): void {
+    loggingEnabled = enable;
+}
+
+export function logObservables(): void {
+    if (loggingEnabled) {
+        for (const obj of log) {
+            console.dir(obj, { getters: true });
+        }
+    }
+    log.clear();
+}
+
+function observable(observableType: string) {
     // const flagged = ["Foo", "Bar", "Baz", "quux", "heyo"];
     return function<T extends ObservableCtor>(constructor: T, _: unknown) {
         return class Observable extends constructor {
+            public readonly _observableType: string;
+            public readonly _observableMetadata?: string;
+
             constructor(...args: any[]) {
                 super(...args);
-                this.hookIntoPropertySetters(args);
+                this._observableType = observableType;
+                try {
+                    this._observableMetadata = (this as any).__tsDebuggerDisplay?.();
+                } catch (_) { }
+                // this.hookIntoPropertySetters(args);
+                if (loggingEnabled) {
+                    log.add(this);
+                }
             }
 
             public tryCreateName(ctorArgs: any[]): string {
-                let name = className
+                let name = observableType
                 const suffix = ctorArgs.find(a => typeof a === "string");
                 if (suffix) {
                     name += ":" + suffix;
@@ -10358,7 +10395,7 @@ export function observable(className: string) {
                         get() { return backingField; },
                         set(value) {
                             backingField = value;
-                            if (Debug.logObservables) {
+                            if (loggingEnabled) {
                                 // @ts-ignore
                                 console.dir([
                                     name,
