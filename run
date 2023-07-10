@@ -1,0 +1,2 @@
+#!/bin/zsh
+/opt/homebrew/bin/node ./built/local/tsc.js -p ./sandbox/
