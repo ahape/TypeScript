@@ -984,6 +984,7 @@ import {
     SyntaxKind,
     SyntheticDefaultModuleType,
     SyntheticExpression,
+    sys,
     TaggedTemplateExpression,
     TemplateExpression,
     TemplateLiteralType,
@@ -1017,7 +1018,7 @@ import {
     Type,
     TypeAliasDeclaration,
     TypeAssertion,
-    TypeChecker,
+    TypeCheckerExtended,
     TypeCheckerHost,
     TypeComparer,
     TypeElement,
@@ -1387,7 +1388,7 @@ export function isInstantiatedModule(node: ModuleDeclaration, preserveConstEnums
 }
 
 /** @internal */
-export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
+export function createTypeChecker(host: TypeCheckerHost): TypeCheckerExtended {
     // Why var? It avoids TDZ checks in the runtime which can be costly.
     // See: https://github.com/microsoft/TypeScript/issues/52924
     /* eslint-disable no-var */
@@ -1480,7 +1481,8 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     // for most of these, we perform the guard only on `checker` to avoid any possible
     // extra cost of calling `getParseTreeNode` when calling these functions from inside the
     // checker.
-    const checker: TypeChecker = {
+    const checker: TypeCheckerExtended = {
+        dumpSymbols,
         getNodeCount: () => reduceLeft(host.getSourceFiles(), (n, s) => n + s.nodeCount, 0),
         getIdentifierCount: () => reduceLeft(host.getSourceFiles(), (n, s) => n + s.identifierCount, 0),
         getSymbolCount: () => reduceLeft(host.getSourceFiles(), (n, s) => n + s.symbolCount, symbolCount),
@@ -1880,6 +1882,29 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         const res = !node ? undefined : getResolvedSignature(node, candidatesOutArray, checkMode);
         apparentArgumentCount = undefined;
         return res;
+    }
+
+    interface SymbolRepr {
+        name: string;
+        declarations?: (string | undefined)[];
+    }
+
+    function reprSymbol(symbol: Symbol): SymbolRepr {
+        return {
+            name: symbol.escapedName.toString(),
+            declarations: symbol.declarations?.map(d =>
+                getSourceFileOfNode(d)?.fileName),
+        };
+    }
+
+    function dumpSymbols(): void {
+        const reprArray = nodeLinks
+            .map(link => link.resolvedSymbol)
+            .filter((s): s is Symbol => !!s)
+            .map(reprSymbol)
+            .filter(r => r.declarations?.some((d) => d?.includes("sandbox")));
+        const json = JSON.stringify(reprArray, null, 2);
+        sys.writeFile("/tmp/dump.json", json, false);
     }
 
     var tupleTypes = new Map<string, GenericType>();

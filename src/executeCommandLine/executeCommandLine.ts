@@ -912,6 +912,8 @@ function performCompilation(
     );
     reportStatistics(sys, program, /*solutionPerformance*/ undefined);
     cb(program);
+    const checker = program.getTypeChecker();
+    checker.dumpSymbols();
     return sys.exit(exitStatus);
 }
 

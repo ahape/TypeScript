@@ -321,7 +321,7 @@ import {
     tracing,
     trimStringEnd,
     TsConfigSourceFile,
-    TypeChecker,
+    TypeCheckerExtended,
     typeDirectiveIsEqualTo,
     TypeReferenceDirectiveResolutionCache,
     UnparsedSource,
@@ -1494,7 +1494,7 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
     let files: SourceFile[];
     let symlinks: SymlinkCache | undefined;
     let commonSourceDirectory: string;
-    let typeChecker: TypeChecker;
+    let typeChecker: TypeCheckerExtended;
     let classifiableNames: Set<__String>;
     const ambientModuleNameToUnmodifiedFileName = new Map<string, string>();
     let fileReasons = createMultiMap<Path, FileIncludeReason>();

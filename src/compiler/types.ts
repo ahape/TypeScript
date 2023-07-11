@@ -4768,7 +4768,7 @@ export interface Program extends ScriptReferenceHost {
     /**
      * Gets a type checker that can be used to semantically analyze source files in the program.
      */
-    getTypeChecker(): TypeChecker;
+    getTypeChecker(): TypeCheckerExtended;
 
     /** @internal */ getCommonSourceDirectory(): string;
 
@@ -4959,6 +4959,10 @@ export interface TypeCheckerHost extends ModuleSpecifierResolutionHost {
 
     typesPackageExists(packageName: string): boolean;
     packageBundlesTypes(packageName: string): boolean;
+}
+
+export interface TypeCheckerExtended extends TypeChecker {
+    dumpSymbols(): void;
 }
 
 export interface TypeChecker {
